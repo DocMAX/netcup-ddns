@@ -43,35 +43,18 @@ end
 
 local com, id, response, ip4, ipv6, modified
 
--- Get local WAN IPv4 address using ubus (OpenWRT specific)
-local ip4 = ""
-local handle = io.popen("ubus call network.interface.wan status")
-if handle then
-    local result = handle:read("*a")
-    handle:close()
-    local status = cjson.parse(result)
-    if status and status['ipv4-address'] and status['ipv4-address'][1] and status['ipv4-address'][1].address then
-        ip4 = status['ipv4-address'][1].address
-    end
-end
-
+response = {}
+http.request{url = "http://v4.ident.me", sink = ltn12.sink.table(response)}
+ip4=table.concat(response)
 if ip4 == "" then -- something went terribly wrong. Give up.
-    print ("no network or WAN interface not found")
-    return
+	print ("no network")
+	return
 end
 
--- Get local WAN IPv6 address using ubus (OpenWRT specific)
-local ipv6 = ""
-local handle = io.popen("ubus call network.interface.wan_6 status")
-if handle then
-    local result = handle:read("*a")
-    handle:close()
-    local status = cjson.parse(result)
-    if status and status['ipv6-address'] and status['ipv6-address'][1] and status['ipv6-address'][1].address then
-        ipv6 = status['ipv6-address'][1].address
-        ipv6,_ = (string.gsub(ipv6, IP6_DEVICE, IP6_SERVER))
-    end
-end
+response = {}
+http.request{url = "http://v6.ident.me", sink = ltn12.sink.table(response)}
+ipv6 = table.concat(response)
+ipv6,_ = (string.gsub(ipv6, IP6_DEVICE, IP6_SERVER))
 
 response = socket.dns.toip(DOMAIN)
 if ip4 == response then 
